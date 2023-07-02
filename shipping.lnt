@@ -47,12 +47,17 @@ module shipping is
     (stock)
   end channel
 
+  channel cancel_order_C is
+    (bool)
+  end channel
+
   process main[p: product_C,
                q: quantity_C,
                p_in: product_in_C,
                q_in: quantity_in_C,
                sa: stock_available_C,
                o: order_C,
+               co: cancel_order_C,
                display_stock: any] is
 
     var available_stock: stock_array, x: nat, y: product in
@@ -78,7 +83,9 @@ module shipping is
     par
       o -> receiveOrder[p_in, q_in, o]
       ||
-      o -> checkStock[o, sa, display_stock](available_stock)
+      o, sa -> checkStock[o, sa, display_stock](available_stock)
+      ||
+      sa, co -> notifyOutOfStock[sa, co]
     end par
       
     end var
@@ -104,6 +111,15 @@ module shipping is
       --sa(available_stock)
       sa(stock_available)
       --display_stock(order.qty)
+    end var
+  end process
+
+  process notifyOutOfStock[sa: stock_available_C, co: cancel_order_C] is
+    var stock_available: bool in
+      sa(?stock_available);
+      if stock_available == false then
+        co(true)
+      end if
     end var
   end process
 
