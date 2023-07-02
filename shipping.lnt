@@ -1,0 +1,87 @@
+module shipping is
+
+  type product is
+    STEEL_BEAM, BLACHODACHOWKA, KOTWA, PLANDEKA, GWOZDZIE
+    with ==, !=
+  end type
+
+  type quantity is
+    quantity(i: nat)
+    with get, set
+  end type
+
+  type stock is
+    stock(prod: product, qty: quantity)
+  with get, set
+  end type
+
+  type stock_array is
+    array [0 .. 3] of stock
+  end type
+
+  channel productC is
+    (product)
+  end channel
+
+  channel quantityC is
+    (quantity)
+  end channel
+
+  channel stock_arrayC is
+    (stock_array)
+  end channel
+
+  process main[p: productC, q: quantityC, sa: stock_arrayC, display_stock: any] is
+    var available_stock: stock_array, x: nat, y: product in
+      available_stock := stock_array(stock(STEEL_BEAM, quantity(10)));
+      --display_stock(available_stock[0].prod, available_stock[0].qty,
+      --              available_stock[1].prod, available_stock[1].qty,
+      --              available_stock[2].prod, available_stock[2].qty,
+      --              available_stock[3].prod, available_stock[3].qty);
+
+      available_stock[1] := available_stock[1].{prod -> BLACHODACHOWKA, qty -> quantity(250)};
+      available_stock[2] := available_stock[2].{prod -> PLANDEKA, qty -> quantity(50)};
+      available_stock[3] := available_stock[3].{prod -> KOTWA, qty -> quantity(255)};
+      display_stock(available_stock[0].prod, available_stock[0].qty,
+                    available_stock[1].prod, available_stock[1].qty,
+                    available_stock[2].prod, available_stock[2].qty,
+                    available_stock[3].prod, available_stock[3].qty);
+    --loop
+    --  receiveOrder[select_product]
+    --end loop
+    x := 1;
+    y := KOTWA;
+    -- function for choosing goes here or something idk
+    par
+      p, q -> receiveOrder[p, q]
+      ||
+      p, q -> checkStock[p, q, sa](available_stock)
+    end par
+      
+    end var
+  end process
+
+  process receiveOrder[p: productC, q: quantityC] is
+    var x: nat, y: product in
+      --p(?y of product);
+      --q(?quantity(x) of quantity) where (x>0 and x<=255);
+      p(?y);
+      q(?quantity(x));
+
+      p(y);
+      q(quantity(x))
+    end var
+  end process
+
+  process checkStock[p: productC, q: quantityC, sa: stock_arrayC](in var available_stock: stock_array) is
+    var x: nat, y: product in
+      p(?y);
+      q(?quantity(x))
+      sa(available_stock)
+    end var
+  end process
+
+  function check_stock (in out available_stock: stock_array) is
+
+  end function
+end module
