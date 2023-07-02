@@ -7,12 +7,12 @@ module shipping is
 
   type quantity is
     quantity(i: nat)
-    with get, set
+    with get, set, ==, !=, >=, <=
   end type
 
   type stock is
     stock(prod: product, qty: quantity)
-  with get, set
+    with get, set
   end type
 
   type stock_array is
@@ -39,11 +39,16 @@ module shipping is
     (stock_array)
   end channel
 
+  channel order_C is
+    (stock)
+  end channel
+
   process main[p: product_C,
                q: quantity_C,
                p_in: product_in_C,
                q_in: quantity_in_C,
                sa: stock_array_C,
+               o: order_C,
                display_stock: any] is
 
     var available_stock: stock_array, x: nat, y: product in
@@ -67,43 +72,46 @@ module shipping is
     --y := KOTWA;
     -- function for choosing goes here or something idk
     par
-      p, q -> receiveOrder[p_in, q_in, p, q]
+      o -> receiveOrder[p_in, q_in, o]
       ||
-      p, q -> checkStock[p, q, sa](available_stock)
+      o -> checkStock[o, sa, display_stock](available_stock)
     end par
       
     end var
   end process
 
-  process receiveOrder[p_in: product_in_C, q_in: quantity_in_C, p: product_C, q: quantity_C] is
-    var x: nat, y: product in
-      --p(?y of product);
-      --q(?quantity(x) of quantity) where (x>0 and x<=255);
-      --p(?y);
-      --q(?quantity(x));
+  process receiveOrder[p_in: product_in_C, q_in: quantity_in_C, o: order_C] is
+    var x: nat, y: product, order: stock in
+      -- get user order
       p_in(?y);
       q_in(?quantity(x));
 
-      x := check_stock(x);
-      p(y);
-      q(quantity(x))
+      -- pass order further
+      o(stock(y, quantity(x)))
     end var
   end process
 
-  process checkStock[p: product_C, q: quantity_C, sa: stock_array_C](in available_stock: stock_array) is
-    var x: nat, y: product in
-      p(?y);
-      q(?quantity(x));
-      sa(available_stock)
+  process checkStock[o: order_C, sa: stock_array_C, display_stock: any](in available_stock: stock_array) is
+    var order: stock, stock_available: bool in
+      o(?order);
+
+      stock_available := check_stock(order, available_stock);
+
+      --sa(available_stock)
+      display_stock(stock_available)
+      --display_stock(order.qty)
     end var
   end process
 
-  function check_stock (in var x: nat): nat  is
-
-    if x == 255 then x := 0
-    else x := x + 1
-    end if;
-
-    return x
+  function check_stock (in var order: stock, available_stock: stock_array): bool is
+    var i: nat in
+      for i := 0 while i <= 3 by i := i + 1 loop
+        if available_stock[i].prod == order.prod and available_stock[i].qty >= order.qty
+          then return true
+        end if
+      end loop;
+      return false
+    end var
   end function
+
 end module
