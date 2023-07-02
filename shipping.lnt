@@ -19,19 +19,33 @@ module shipping is
     array [0 .. 3] of stock
   end type
 
-  channel productC is
+  channel product_in_C is
     (product)
   end channel
 
-  channel quantityC is
+  channel quantity_in_C is
     (quantity)
   end channel
 
-  channel stock_arrayC is
+  channel product_C is
+    (product)
+  end channel
+
+  channel quantity_C is
+    (quantity)
+  end channel
+
+  channel stock_array_C is
     (stock_array)
   end channel
 
-  process main[p: productC, q: quantityC, sa: stock_arrayC, display_stock: any] is
+  process main[p: product_C,
+               q: quantity_C,
+               p_in: product_in_C,
+               q_in: quantity_in_C,
+               sa: stock_array_C,
+               display_stock: any] is
+
     var available_stock: stock_array, x: nat, y: product in
       available_stock := stock_array(stock(STEEL_BEAM, quantity(10)));
       --display_stock(available_stock[0].prod, available_stock[0].qty,
@@ -41,7 +55,7 @@ module shipping is
 
       available_stock[1] := available_stock[1].{prod -> BLACHODACHOWKA, qty -> quantity(250)};
       available_stock[2] := available_stock[2].{prod -> PLANDEKA, qty -> quantity(50)};
-      available_stock[3] := available_stock[3].{prod -> KOTWA, qty -> quantity(255)};
+      available_stock[3] := available_stock[3].{prod -> KOTWA, qty -> quantity(254)};
       display_stock(available_stock[0].prod, available_stock[0].qty,
                     available_stock[1].prod, available_stock[1].qty,
                     available_stock[2].prod, available_stock[2].qty,
@@ -49,11 +63,11 @@ module shipping is
     --loop
     --  receiveOrder[select_product]
     --end loop
-    x := 1;
-    y := KOTWA;
+    --x := 1;
+    --y := KOTWA;
     -- function for choosing goes here or something idk
     par
-      p, q -> receiveOrder[p, q]
+      p, q -> receiveOrder[p_in, q_in, p, q]
       ||
       p, q -> checkStock[p, q, sa](available_stock)
     end par
@@ -61,27 +75,35 @@ module shipping is
     end var
   end process
 
-  process receiveOrder[p: productC, q: quantityC] is
+  process receiveOrder[p_in: product_in_C, q_in: quantity_in_C, p: product_C, q: quantity_C] is
     var x: nat, y: product in
       --p(?y of product);
       --q(?quantity(x) of quantity) where (x>0 and x<=255);
-      p(?y);
-      q(?quantity(x));
+      --p(?y);
+      --q(?quantity(x));
+      p_in(?y);
+      q_in(?quantity(x));
 
+      x := check_stock(x);
       p(y);
       q(quantity(x))
     end var
   end process
 
-  process checkStock[p: productC, q: quantityC, sa: stock_arrayC](in var available_stock: stock_array) is
+  process checkStock[p: product_C, q: quantity_C, sa: stock_array_C](in available_stock: stock_array) is
     var x: nat, y: product in
       p(?y);
-      q(?quantity(x))
+      q(?quantity(x));
       sa(available_stock)
     end var
   end process
 
-  function check_stock (in out available_stock: stock_array) is
+  function check_stock (in var x: nat): nat  is
 
+    if x == 255 then x := 0
+    else x := x + 1
+    end if;
+
+    return x
   end function
 end module
