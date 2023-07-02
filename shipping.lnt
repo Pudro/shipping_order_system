@@ -39,6 +39,10 @@ module shipping is
     (stock_array)
   end channel
 
+  channel stock_available_C is
+    (bool)
+  end channel
+
   channel order_C is
     (stock)
   end channel
@@ -47,7 +51,7 @@ module shipping is
                q: quantity_C,
                p_in: product_in_C,
                q_in: quantity_in_C,
-               sa: stock_array_C,
+               sa: stock_available_C,
                o: order_C,
                display_stock: any] is
 
@@ -91,14 +95,14 @@ module shipping is
     end var
   end process
 
-  process checkStock[o: order_C, sa: stock_array_C, display_stock: any](in available_stock: stock_array) is
+  process checkStock[o: order_C, sa: stock_available_C, display_stock: any](in available_stock: stock_array) is
     var order: stock, stock_available: bool in
       o(?order);
 
       stock_available := check_stock(order, available_stock);
 
       --sa(available_stock)
-      display_stock(stock_available)
+      sa(stock_available)
       --display_stock(order.qty)
     end var
   end process
