@@ -1,0 +1,170 @@
+module processes(types, channels) is
+
+  function check_stock (available_stock: stock_array, order: stock): bool is
+    var n: nat in
+      for n := 0 while n <= 3 by n := n + 1 loop
+        if available_stock[n].prod == order.prod and available_stock[n].qty >= order.qty then
+          return true
+        end if
+      end loop;
+      return false
+    end var
+  end function
+
+  function update_stock (available_stock: stock_array, order: stock): stock_array is
+    var n: nat, new_qty: quantity in
+      for n := 0 while n <= 3 by n := n + 1 loop
+        if available_stock[n].prod == order.prod and available_stock[n].qty >= order.qty then
+          new_qty := quantity(available_stock[n].qty.i - order.qty.i);
+          available_stock[n] := available_stock[n].{qty -> new_qty}
+        end if
+      end loop;
+      return available_stock
+    end var
+  end function
+
+  process updateStock[o: order_C, oa: order_accepted_C, display_stock: any](available_stock: stock_array) is
+    var order: stock, order_accepted_signal: bool in
+      o(?order);
+      oa(?order_accepted_signal);
+      if order_accepted_signal then
+        available_stock := update_stock(available_stock, order);
+        display_stock(available_stock)
+      end if
+    end var
+  end process
+
+  process receiveOrder[p_in: product_in_C, q_in: quantity_in_C, o: order_C] is
+    var x: nat, y: product, order: stock in
+      p_in(?y);
+      q_in(?quantity(x));
+
+      o(stock(y, quantity(x)))
+    end var
+  end process
+
+  process checkStock[o: order_C, sa: stock_available_C, display_stock: any](available_stock: stock_array) is
+    var order: stock, stock_available: bool in
+      o(?order);
+
+      stock_available := check_stock(available_stock, order);
+
+      sa(stock_available)
+    end var
+  end process
+
+  process acceptOrder[sa: stock_available_C, oa: order_accepted_C] is
+    var stock_available: bool in 
+      sa(?stock_available);
+      if stock_available then
+        select
+          oa(true)
+          []
+          oa(false)
+        end select
+      end if
+    end var
+  end process
+
+  process notifyOutOfStock[sa: stock_available_C, co: cancel_order_C, notify_customer: any] is
+    var stock_available: bool in
+      sa(?stock_available);
+      if not(stock_available) then
+        par
+          co(true)
+          ||
+          notify_customer("Product not available")
+        end par
+      end if
+    end var
+  end process
+
+  process makePayment[oa: order_accepted_C, pr: payment_received_C] is
+    var order_accepted_signal: bool in
+      oa(?order_accepted_signal);
+      if order_accepted_signal then
+        select
+          pr(true)
+          []
+          pr(false)
+        end select
+      end if
+    end var
+  end process
+
+  process finalizeOrder[pr: payment_received_C, fo: order_finalized_C, os: order_shipped_C,
+                        packing_order: any, tracking_shipment: any](available_stock: stock_array) is
+    var payment_received_signal, order_shipped_signal: bool in
+      pr(?payment_received_signal);
+      if payment_received_signal then
+          par
+            os ->
+            packOrder[packing_order];
+            shipOrder[os]
+            ||
+            os ->
+            trackShipment[tracking_shipment];
+            os(?order_shipped_signal)
+          end par;
+          if order_shipped_signal then
+              fo(true)
+          end if
+      end if
+    end var
+  end process
+
+  process packOrder[packing_order: any] is
+    packing_order
+  end process
+
+  process shipOrder[os: order_shipped_C] is
+    os(true)
+  end process
+
+  process trackShipment[tracking_shipment: any] is
+    tracking_shipment
+  end process
+
+  process cancelOrder[co: cancel_order_C, clo: close_order_C,
+                      pr: payment_received_C, cancel_order: any] is
+    var cancel_order_signal, payment_received_signal: bool in
+      par
+        co(?cancel_order_signal);
+        if cancel_order_signal then
+          cancel_order;
+          clo(true)
+        end if
+        ||
+        pr(?payment_received_signal);
+        if not(payment_received_signal) then
+          cancel_order;
+          clo(true)
+        end if
+      end par
+    end var 
+  end process
+
+  process closeOrder[clo: close_order_C, oa: order_accepted_C,
+                     os: order_shipped_C, fo: order_finalized_C,
+                     close_order: any] is
+    var close_order_signal, order_accepted_signal, order_finalized_signal: bool in
+      par
+        clo(?close_order_signal);
+        if close_order_signal then
+          close_order
+        end if
+        ||
+        oa(?order_accepted_signal);
+        if not(order_accepted_signal) then
+          close_order
+        end if
+        ||
+        fo(?order_finalized_signal);
+        if order_finalized_signal then
+          close_order
+        end if
+      end par
+    end var 
+  end process
+
+end module

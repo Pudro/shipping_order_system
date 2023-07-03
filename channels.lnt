@@ -1,0 +1,59 @@
+module channels(types) is
+
+  channel product_in_C is
+    (product)
+  end channel
+
+  channel quantity_in_C is
+    (quantity)
+  end channel
+
+  channel product_C is
+    (product)
+  end channel
+
+  channel quantity_C is
+    (quantity)
+  end channel
+
+  channel stock_array_C is
+    (stock_array)
+  end channel
+
+  channel stock_available_C is
+    (bool)
+  end channel
+
+  channel order_C is
+    (stock)
+  end channel
+
+  channel cancel_order_C is
+    (bool)
+  end channel
+
+  channel close_order_C is
+    (bool)
+  end channel
+
+  channel order_accepted_C is
+    (bool)
+  end channel
+
+  channel payment_received_C is
+    (bool)
+  end channel
+
+  channel order_packed_C is
+    (bool)
+  end channel
+
+  channel order_shipped_C is
+    (bool)
+  end channel
+
+  channel order_finalized_C is
+    (bool)
+  end channel
+
+end module
