@@ -104,7 +104,7 @@ module shipping is
       ||
       co, clo -> cancelOrder[co, clo, cancel_order]
       ||
-      clo -> closeOrder[clo, close_order]
+      clo, oa -> closeOrder[clo, oa, close_order]
     end par
       
     end var
@@ -169,13 +169,19 @@ module shipping is
     end var 
   end process
 
-  process closeOrder[clo: close_order_C, close_order: any] is
-    var close_order_signal: bool in
-      clo(?close_order_signal);
-      if close_order_signal == true then
-        close_order;
-        null
-      end if
+  process closeOrder[clo: close_order_C, oa: order_accepted_C, close_order: any] is
+    var close_order_signal, order_accepted_signal: bool in
+      par
+        clo(?close_order_signal);
+        if close_order_signal then
+          close_order
+        end if
+        ||
+        oa(?order_accepted_signal);
+        if not(order_accepted_signal) then
+          close_order
+        end if
+      end par
     end var 
   end process
 
