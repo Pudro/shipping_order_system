@@ -1,0 +1,22 @@
+module types is
+
+  type product is
+    STEEL_BEAM, BLACHODACHOWKA, KOTWA, PLANDEKA, GWOZDZIE
+    with ==, !=
+  end type
+
+  type quantity is
+    quantity(i: nat)
+    with get, set, ==, !=, >=, <=
+  end type
+
+  type stock is
+    stock(prod: product, qty: quantity)
+    with get, set
+  end type
+
+  type stock_array is
+    array [0 .. 3] of stock
+  end type
+
+end module

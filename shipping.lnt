@@ -1,23 +1,4 @@
-module shipping is
-
-  type product is
-    STEEL_BEAM, BLACHODACHOWKA, KOTWA, PLANDEKA, GWOZDZIE
-    with ==, !=
-  end type
-
-  type quantity is
-    quantity(i: nat)
-    with get, set, ==, !=, >=, <=
-  end type
-
-  type stock is
-    stock(prod: product, qty: quantity)
-    with get, set
-  end type
-
-  type stock_array is
-    array [0 .. 3] of stock
-  end type
+module shipping (types) is
 
   channel product_in_C is
     (product)
@@ -80,44 +61,31 @@ module shipping is
                p_in: product_in_C,
                q_in: quantity_in_C,
                sa: stock_available_C,
-               notify_customer: any,
                oa: order_accepted_C,
                pr: payment_received_C,
                op: order_packed_C,
                o: order_C,
                co: cancel_order_C,
-               cancel_order: any,
                clo: close_order_C,
+               os: order_shipped_C,
+               fo: order_finalized_C,
+               notify_customer: any,
+               cancel_order: any,
                close_order: any,
                packing_order: any,
                tracking_shipment: any,
-               os: order_shipped_C,
-               fo: order_finalized_C,
                display_stock: any] is
 
     var available_stock: stock_array, x: nat, y: product in
       available_stock := stock_array(stock(STEEL_BEAM, quantity(10)));
-      --display_stock(available_stock[0].prod, available_stock[0].qty,
-      --              available_stock[1].prod, available_stock[1].qty,
-      --              available_stock[2].prod, available_stock[2].qty,
-      --              available_stock[3].prod, available_stock[3].qty);
-
       available_stock[1] := available_stock[1].{prod -> BLACHODACHOWKA, qty -> quantity(250)};
       available_stock[2] := available_stock[2].{prod -> PLANDEKA, qty -> quantity(50)};
       available_stock[3] := available_stock[3].{prod -> KOTWA, qty -> quantity(254)};
-      hide display_stock: none in
       display_stock(available_stock[0].prod, available_stock[0].qty,
                     available_stock[1].prod, available_stock[1].qty,
                     available_stock[2].prod, available_stock[2].qty,
-                    available_stock[3].prod, available_stock[3].qty)
-      end hide;
-    --loop
-    --  receiveOrder[select_product]
-    --end loop
-    --x := 1;
-    --y := KOTWA;
-    -- function for choosing goes here or something idk
-      loop
+                    available_stock[3].prod, available_stock[3].qty);
+
       par
         o -> receiveOrder[p_in, q_in, o]
         ||
@@ -127,7 +95,7 @@ module shipping is
         ||
         sa, oa -> acceptOrder[sa, oa]
         ||
-        o, oa -> updateStock[o, oa](available_stock)
+        o, oa -> updateStock[o, oa, display_stock](available_stock)
         ||
         co, clo, pr -> cancelOrder[co, clo, pr, cancel_order]
         ||
@@ -137,17 +105,17 @@ module shipping is
         ||
         pr, fo -> finalizeOrder[pr, fo, os, packing_order, tracking_shipment](available_stock)
       end par
-      end loop
       
     end var
   end process
 
-  process updateStock[o: order_C, oa: order_accepted_C](available_stock: stock_array) is
+  process updateStock[o: order_C, oa: order_accepted_C, display_stock: any](available_stock: stock_array) is
     var order: stock, order_accepted_signal: bool in
       o(?order);
       oa(?order_accepted_signal);
       if order_accepted_signal then
-        available_stock := update_stock(available_stock, order)
+        available_stock := update_stock(available_stock, order);
+        display_stock(available_stock)
       end if
     end var
   end process
@@ -169,9 +137,7 @@ module shipping is
 
       stock_available := check_stock(available_stock, order);
 
-      --sa(available_stock)
       sa(stock_available)
-      --display_stock(order.qty)
     end var
   end process
 
@@ -229,7 +195,6 @@ module shipping is
             os(?order_shipped_signal)
           end par;
           if order_shipped_signal then
-              tracking_shipment(available_stock);
               fo(true)
           end if
       end if
