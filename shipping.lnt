@@ -65,6 +65,7 @@ module shipping is
                co: cancel_order_C,
                cancel_order: any,
                clo: close_order_C,
+               close_order: any,
                display_stock: any] is
 
     var available_stock: stock_array, x: nat, y: product in
@@ -96,7 +97,7 @@ module shipping is
       ||
       co, clo -> cancelOrder[co, clo, cancel_order]
       ||
-      clo -> closeOrder[clo]
+      clo -> closeOrder[clo, close_order]
     end par
       
     end var
@@ -144,19 +145,17 @@ module shipping is
     var cancel_order_signal: bool in
       co(?cancel_order_signal);
       if cancel_order_signal == true then
-        par
-          clo(true)
-          ||
-          cancel_order
-        end par
+        cancel_order;
+        clo(true)
       end if
     end var 
   end process
 
-  process closeOrder[clo: close_order_C] is
-    var close_order: bool in
-      clo(?close_order);
-      if close_order == true then
+  process closeOrder[clo: close_order_C, close_order: any] is
+    var close_order_signal: bool in
+      clo(?close_order_signal);
+      if close_order_signal == true then
+        close_order;
         null
       end if
     end var 
