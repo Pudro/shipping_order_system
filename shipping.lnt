@@ -63,6 +63,7 @@ module shipping is
                notify_customer: any,
                o: order_C,
                co: cancel_order_C,
+               cancel_order: any,
                clo: close_order_C,
                display_stock: any] is
 
@@ -93,7 +94,7 @@ module shipping is
       ||
       sa, co -> notifyOutOfStock[sa, co, notify_customer]
       ||
-      co, clo -> cancelOrder[co, clo]
+      co, clo -> cancelOrder[co, clo, cancel_order]
       ||
       clo -> closeOrder[clo]
     end par
@@ -139,11 +140,15 @@ module shipping is
     end var
   end process
 
-  process cancelOrder[co: cancel_order_C, clo: close_order_C] is
-    var cancel_order: bool in
-      co(?cancel_order);
-      if cancel_order == true then
-        clo(true)
+  process cancelOrder[co: cancel_order_C, clo: close_order_C, cancel_order: any] is
+    var cancel_order_signal: bool in
+      co(?cancel_order_signal);
+      if cancel_order_signal == true then
+        par
+          clo(true)
+          ||
+          cancel_order
+        end par
       end if
     end var 
   end process
