@@ -59,13 +59,23 @@ module shipping is
     (bool)
   end channel
 
+  channel payment_received_C is
+    (bool)
+  end channel
+
+  channel order_packed_C is
+    (bool)
+  end channel
+
   process main[p: product_C,
                q: quantity_C,
                p_in: product_in_C,
                q_in: quantity_in_C,
                sa: stock_available_C,
-               oa: order_accepted_C,
                notify_customer: any,
+               oa: order_accepted_C,
+               pr: payment_received_C,
+               op: order_packed_C,
                o: order_C,
                co: cancel_order_C,
                cancel_order: any,
@@ -102,9 +112,11 @@ module shipping is
       ||
       sa, oa -> acceptOrder[sa, oa]
       ||
-      co, clo -> cancelOrder[co, clo, cancel_order]
+      co, clo, pr -> cancelOrder[co, clo, pr, cancel_order]
       ||
       clo, oa -> closeOrder[clo, oa, close_order]
+      ||
+      oa, pr -> makePayment[oa, pr]
     end par
       
     end var
@@ -159,13 +171,48 @@ module shipping is
     end var
   end process
 
-  process cancelOrder[co: cancel_order_C, clo: close_order_C, cancel_order: any] is
-    var cancel_order_signal: bool in
-      co(?cancel_order_signal);
-      if cancel_order_signal then
-        cancel_order;
-        clo(true)
+  --process finalizeOrder[oa: order_accepted_C, pr: payment_received_C, op: order_packed_C] is
+  --  var order_accepted_signal, payment_received_signal: bool in
+  --    oa(?order_accepted_signal);
+  --    if order_accepted_signal then
+  --      par
+  --        packOrder[op]
+  --        ||
+  --        makePayment[pr]
+  --      end par
+  --    end if
+  --  end var
+  --end process
+
+  process makePayment[oa: order_accepted_C, pr: payment_received_C] is
+    var order_accepted_signal: bool in
+      oa(?order_accepted_signal);
+      if order_accepted_signal then
+        select
+          pr(true)
+          []
+          pr(false)
+        end select
       end if
+    end var
+  end process
+
+  process cancelOrder[co: cancel_order_C, clo: close_order_C,
+                      pr: payment_received_C, cancel_order: any] is
+    var cancel_order_signal, payment_received_signal: bool in
+      par
+        co(?cancel_order_signal);
+        if cancel_order_signal then
+          cancel_order;
+          clo(true)
+        end if
+        ||
+        pr(?payment_received_signal);
+        if not(payment_received_signal) then
+          cancel_order;
+          clo(true)
+        end if
+      end par
     end var 
   end process
 
