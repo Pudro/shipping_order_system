@@ -55,11 +55,16 @@ module shipping is
     (bool)
   end channel
 
+  channel order_accepted_C is
+    (bool)
+  end channel
+
   process main[p: product_C,
                q: quantity_C,
                p_in: product_in_C,
                q_in: quantity_in_C,
                sa: stock_available_C,
+               oa: order_accepted_C,
                notify_customer: any,
                o: order_C,
                co: cancel_order_C,
@@ -95,6 +100,8 @@ module shipping is
       ||
       sa, co -> notifyOutOfStock[sa, co, notify_customer]
       ||
+      sa, oa -> acceptOrder[sa, oa]
+      ||
       co, clo -> cancelOrder[co, clo, cancel_order]
       ||
       clo -> closeOrder[clo, close_order]
@@ -126,17 +133,28 @@ module shipping is
     end var
   end process
 
+  process acceptOrder[sa: stock_available_C, oa: order_accepted_C] is
+    var stock_available: bool in 
+      sa(?stock_available);
+      if stock_available then
+        select
+          oa(true)
+          []
+          oa(false)
+        end select
+      end if
+    end var
+  end process
+
   process notifyOutOfStock[sa: stock_available_C, co: cancel_order_C, notify_customer: any] is
     var stock_available: bool in
       sa(?stock_available);
-      if stock_available == false then
+      if not(stock_available) then
         par
           co(true)
           ||
           notify_customer("Product not available")
         end par
-      else
-        notify_customer("Product available")
       end if
     end var
   end process
@@ -144,7 +162,7 @@ module shipping is
   process cancelOrder[co: cancel_order_C, clo: close_order_C, cancel_order: any] is
     var cancel_order_signal: bool in
       co(?cancel_order_signal);
-      if cancel_order_signal == true then
+      if cancel_order_signal then
         cancel_order;
         clo(true)
       end if
