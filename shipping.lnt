@@ -60,6 +60,7 @@ module shipping is
                p_in: product_in_C,
                q_in: quantity_in_C,
                sa: stock_available_C,
+               notify_customer: any,
                o: order_C,
                co: cancel_order_C,
                clo: close_order_C,
@@ -90,7 +91,11 @@ module shipping is
       ||
       o, sa -> checkStock[o, sa, display_stock](available_stock)
       ||
-      sa, co -> notifyOutOfStock[sa, co]
+      sa, co -> notifyOutOfStock[sa, co, notify_customer]
+      ||
+      co, clo -> cancelOrder[co, clo]
+      ||
+      clo -> closeOrder[clo]
     end par
       
     end var
@@ -119,20 +124,35 @@ module shipping is
     end var
   end process
 
-  process notifyOutOfStock[sa: stock_available_C, co: cancel_order_C] is
+  process notifyOutOfStock[sa: stock_available_C, co: cancel_order_C, notify_customer: any] is
     var stock_available: bool in
       sa(?stock_available);
       if stock_available == false then
-        co(true)
+        par
+          co(true)
+          ||
+          notify_customer("Product not available")
+        end par
+      else
+        notify_customer("Product available")
       end if
     end var
   end process
 
   process cancelOrder[co: cancel_order_C, clo: close_order_C] is
     var cancel_order: bool in
-      co(?close_order)
+      co(?cancel_order);
       if cancel_order == true then
         clo(true)
+      end if
+    end var 
+  end process
+
+  process closeOrder[clo: close_order_C] is
+    var close_order: bool in
+      clo(?close_order);
+      if close_order == true then
+        null
       end if
     end var 
   end process
