@@ -51,6 +51,10 @@ module shipping is
     (bool)
   end channel
 
+  channel close_order_C is
+    (bool)
+  end channel
+
   process main[p: product_C,
                q: quantity_C,
                p_in: product_in_C,
@@ -58,6 +62,7 @@ module shipping is
                sa: stock_available_C,
                o: order_C,
                co: cancel_order_C,
+               clo: close_order_C,
                display_stock: any] is
 
     var available_stock: stock_array, x: nat, y: product in
@@ -121,6 +126,15 @@ module shipping is
         co(true)
       end if
     end var
+  end process
+
+  process cancelOrder[co: cancel_order_C, clo: close_order_C] is
+    var cancel_order: bool in
+      co(?close_order)
+      if cancel_order == true then
+        clo(true)
+      end if
+    end var 
   end process
 
   function check_stock (in var order: stock, available_stock: stock_array): bool is
